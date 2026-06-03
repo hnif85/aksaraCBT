@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 
-const DEEPSEEK_URL = 'https://api.deepseek.com/v1/chat/completions'
+const PROVIDERS = [
+  { url: 'https://r7c3wtm.abc-tunnel.us/v1/chat/completions', model: 'cc/claude-opus-4-6' },
+  { url: 'https://api.deepseek.com/v1/chat/completions', model: 'deepseek-chat' },
+]
 const BATCH_SIZE = 5
 const CONCURRENCY = 3
 
@@ -143,12 +146,15 @@ async function processBatch(
 }> {
   const result = { entries: [] as any[], errors: [] as { nomor: number; message: string }[] }
 
-  for (let retry = 0; retry < 2; retry++) {
-    const response = await fetch(DEEPSEEK_URL, {
+  for (let retry = 0; retry < PROVIDERS.length; retry++) {
+    const provider = PROVIDERS[retry]
+    const isLast = retry === PROVIDERS.length - 1
+
+    const response = await fetch(provider.url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
-        model: 'deepseek-chat',
+        model: provider.model,
         messages: [
           { role: 'system', content: buildSystemPrompt(mapelName) },
           { role: 'user', content: buildBatchPrompt(kisiBatch) },
@@ -159,22 +165,28 @@ async function processBatch(
     })
 
     if (!response.ok) {
-      const errText = await response.text()
-      result.errors = kisiBatch.map((k) => ({
-        nomor: k.nomor,
-        message: `API error: ${errText}`,
-      }))
-      return result
+      if (isLast) {
+        const errText = await response.text()
+        result.errors = kisiBatch.map((k) => ({
+          nomor: k.nomor,
+          message: `API error (${provider.model}): ${errText}`,
+        }))
+        return result
+      }
+      continue
     }
 
     const data = await response.json()
     const content = data.choices?.[0]?.message?.content
     if (!content) {
-      result.errors = kisiBatch.map((k) => ({
-        nomor: k.nomor,
-        message: 'Respon kosong dari DeepSeek',
-      }))
-      return result
+      if (isLast) {
+        result.errors = kisiBatch.map((k) => ({
+          nomor: k.nomor,
+          message: `Respon kosong dari ${provider.model}`,
+        }))
+        return result
+      }
+      continue
     }
 
     const cleaned = content.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim()
