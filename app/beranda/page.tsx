@@ -9,6 +9,10 @@ interface SetSoalWithMapel extends SetSoal {
   mata_pelajaran?: { nama: string } | null
 }
 
+interface HasilUjianWithMapel extends HasilUjian {
+  set_soal?: { mata_pelajaran?: { nama: string } | null } | null
+}
+
 interface MapelOption {
   id: string
   nama: string
@@ -21,7 +25,7 @@ export default function BerandaPage() {
   const [profilKelas, setProfilKelas] = useState('')
   const [profilId, setProfilId] = useState('')
   const [ujianTersedia, setUjianTersedia] = useState<SetSoalWithMapel[]>([])
-  const [riwayat, setRiwayat] = useState<HasilUjian[]>([])
+  const [riwayat, setRiwayat] = useState<HasilUjianWithMapel[]>([])
   const [loading, setLoading] = useState(true)
   const [mapelList, setMapelList] = useState<MapelOption[]>([])
   const [selectedMapel, setSelectedMapel] = useState('')
@@ -43,7 +47,7 @@ export default function BerandaPage() {
     async function fetchData() {
       const [setSoalRes, hasilRes, kisiRes] = await Promise.all([
         supabase.from('set_soal').select('*, mata_pelajaran!mata_pelajaran_id(nama, kelas)').eq('status', 'ready'),
-        supabase.from('hasil_ujian').select('*').eq('profil_id', id).order('created_at', { ascending: false }),
+        supabase.from('hasil_ujian').select('*, set_soal!set_soal_id(mata_pelajaran!mata_pelajaran_id(nama))').eq('profil_id', id).order('created_at', { ascending: false }),
         supabase.from('kisi_kisi').select('mata_pelajaran_id, mata_pelajaran!mata_pelajaran_id(nama, kelas)'),
       ])
 
@@ -53,7 +57,7 @@ export default function BerandaPage() {
         )
         setUjianTersedia(filtered as unknown as SetSoalWithMapel[])
       }
-      if (hasilRes.data) setRiwayat(hasilRes.data as HasilUjian[])
+      if (hasilRes.data) setRiwayat(hasilRes.data as unknown as HasilUjianWithMapel[])
 
       if (kisiRes.data) {
         const map = new Map<string, MapelOption>()
@@ -273,6 +277,7 @@ export default function BerandaPage() {
               <thead>
                 <tr className="border-b text-left">
                   <th className="py-2 pr-4">Tanggal</th>
+                  <th className="py-2 pr-4">Mapel</th>
                   <th className="py-2 pr-4">Skor</th>
                   <th className="py-2 pr-4">Status</th>
                   <th className="py-2"></th>
@@ -282,6 +287,7 @@ export default function BerandaPage() {
                 {riwayat.map((r) => (
                   <tr key={r.id} className="border-b">
                     <td className="py-2 pr-4">{new Date(r.created_at).toLocaleDateString('id-ID')}</td>
+                    <td className="py-2 pr-4">{r.set_soal?.mata_pelajaran?.nama ?? '-'}</td>
                     <td className="py-2 pr-4">{r.score ?? '-'}</td>
                     <td className="py-2 pr-4">
                       <span className={`rounded px-2 py-0.5 text-xs ${r.status === 'selesai' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
