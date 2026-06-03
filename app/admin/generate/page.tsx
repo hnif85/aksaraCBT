@@ -8,7 +8,9 @@ import type { MataPelajaran, KisiKisi, SetSoal } from '@/lib/types'
 
 export default function GeneratePage() {
   const router = useRouter()
-  const [mapelList, setMapelList] = useState<MataPelajaran[]>([])
+  const [allMapel, setAllMapel] = useState<MataPelajaran[]>([])
+  const [kelasList, setKelasList] = useState<string[]>([])
+  const [selectedKelas, setSelectedKelas] = useState('')
   const [selectedMapel, setSelectedMapel] = useState('')
   const [kisiList, setKisiList] = useState<KisiKisi[]>([])
   const [existingSets, setExistingSets] = useState<SetSoal[]>([])
@@ -21,10 +23,16 @@ export default function GeneratePage() {
   const [generationError, setGenerationError] = useState('')
 
   useEffect(() => {
-    supabase.from('mata_pelajaran').select('*').order('nama').then(({ data }) => {
-      if (data) setMapelList(data)
+    supabase.from('mata_pelajaran').select('*').order('kelas').order('nama').then(({ data }) => {
+      if (data) {
+        setAllMapel(data)
+        const kelas = [...new Set(data.map((m) => m.kelas))].sort()
+        setKelasList(kelas)
+      }
     })
   }, [])
+
+  const mapelList = allMapel.filter((m) => !selectedKelas || m.kelas === selectedKelas)
 
   useEffect(() => {
     if (!selectedMapel) {
@@ -173,13 +181,34 @@ export default function GeneratePage() {
       <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 space-y-4">
           <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Kelas</label>
+            <select
+              value={selectedKelas}
+              onChange={(e) => {
+                setSelectedKelas(e.target.value)
+                setSelectedMapel('')
+                setKisiList([])
+                setExistingSets([])
+                setSelectedKisiIds(new Set())
+              }}
+              className="w-full sm:w-80 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+            >
+              <option value="">Semua Kelas</option>
+              {kelasList.map((k) => (
+                <option key={k} value={k}>{k}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Mata Pelajaran</label>
             <select
               value={selectedMapel}
               onChange={(e) => setSelectedMapel(e.target.value)}
               className="w-full sm:w-80 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              disabled={!selectedKelas && kelasList.length > 0}
             >
-              <option value="">Pilih mata pelajaran...</option>
+              <option value="">{selectedKelas ? 'Pilih mata pelajaran...' : 'Pilih kelas terlebih dahulu'}</option>
               {mapelList.map((m) => (
                 <option key={m.id} value={m.id}>{m.nama}</option>
               ))}

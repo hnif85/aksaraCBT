@@ -18,6 +18,7 @@ interface MapelOption {
 export default function BerandaPage() {
   const router = useRouter()
   const [nama, setNama] = useState('')
+  const [profilKelas, setProfilKelas] = useState('')
   const [profilId, setProfilId] = useState('')
   const [ujianTersedia, setUjianTersedia] = useState<SetSoalWithMapel[]>([])
   const [riwayat, setRiwayat] = useState<HasilUjian[]>([])
@@ -36,19 +37,28 @@ export default function BerandaPage() {
     setProfilId(id)
     setNama(storedNama || '')
 
+    const storedKelas = localStorage.getItem('profil_kelas')
+    setProfilKelas(storedKelas || '')
+
     async function fetchData() {
       const [setSoalRes, hasilRes, kisiRes] = await Promise.all([
-        supabase.from('set_soal').select('*, mata_pelajaran!mata_pelajaran_id(nama)').eq('status', 'ready'),
+        supabase.from('set_soal').select('*, mata_pelajaran!mata_pelajaran_id(nama, kelas)').eq('status', 'ready'),
         supabase.from('hasil_ujian').select('*').eq('profil_id', id).order('created_at', { ascending: false }),
-        supabase.from('kisi_kisi').select('mata_pelajaran_id, mata_pelajaran!mata_pelajaran_id(nama)'),
+        supabase.from('kisi_kisi').select('mata_pelajaran_id, mata_pelajaran!mata_pelajaran_id(nama, kelas)'),
       ])
 
-      if (setSoalRes.data) setUjianTersedia(setSoalRes.data as unknown as SetSoalWithMapel[])
+      if (setSoalRes.data) {
+        const filtered = (setSoalRes.data as any[]).filter(
+          (s) => s.mata_pelajaran?.kelas === storedKelas
+        )
+        setUjianTersedia(filtered as unknown as SetSoalWithMapel[])
+      }
       if (hasilRes.data) setRiwayat(hasilRes.data as HasilUjian[])
 
       if (kisiRes.data) {
         const map = new Map<string, MapelOption>()
         for (const k of kisiRes.data as any[]) {
+          if (k.mata_pelajaran?.kelas !== storedKelas) continue
           const mid = k.mata_pelajaran_id
           if (!map.has(mid)) {
             map.set(mid, { id: mid, nama: k.mata_pelajaran?.nama ?? '', total_kisi: 0 })

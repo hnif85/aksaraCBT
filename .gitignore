@@ -40,3 +40,4 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 supabase/migrations/00003_mata_pelajaran_8_mts.sql
+supabase/migrations/00004_mata_pelajaran_4_sd.sql

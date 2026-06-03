@@ -9,6 +9,7 @@ export default function ProfilSelector({ profil }: { profil: Profil[] }) {
   function pilihProfil(p: Profil) {
     localStorage.setItem('profil_id', p.id)
     localStorage.setItem('profil_nama', p.nama)
+    localStorage.setItem('profil_kelas', p.kelas)
     router.push('/beranda')
   }
 

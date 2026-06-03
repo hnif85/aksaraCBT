@@ -15,7 +15,9 @@ interface ParsedRow {
 }
 
 export default function UploadPage() {
-  const [mapelList, setMapelList] = useState<MataPelajaran[]>([])
+  const [allMapel, setAllMapel] = useState<MataPelajaran[]>([])
+  const [kelasList, setKelasList] = useState<string[]>([])
+  const [selectedKelas, setSelectedKelas] = useState('')
   const [selectedMapel, setSelectedMapel] = useState('')
   const [inputMode, setInputMode] = useState<'file' | 'text'>('file')
   const [file, setFile] = useState<File | null>(null)
@@ -29,10 +31,16 @@ export default function UploadPage() {
   const [replaceMode, setReplaceMode] = useState(false)
 
   useEffect(() => {
-    supabase.from('mata_pelajaran').select('*').order('nama').then(({ data }) => {
-      if (data) setMapelList(data)
+    supabase.from('mata_pelajaran').select('*').order('kelas').order('nama').then(({ data }) => {
+      if (data) {
+        setAllMapel(data)
+        const kelas = [...new Set(data.map((m) => m.kelas))].sort()
+        setKelasList(kelas)
+      }
     })
   }, [])
+
+  const mapelList = allMapel.filter((m) => !selectedKelas || m.kelas === selectedKelas)
 
   const checkExisting = useCallback(async (mapelId: string) => {
     const { count } = await supabase
@@ -135,14 +143,35 @@ export default function UploadPage() {
 
         <form onSubmit={handleParse} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 space-y-4">
           <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Kelas</label>
+            <select
+              value={selectedKelas}
+              onChange={(e) => {
+                setSelectedKelas(e.target.value)
+                setSelectedMapel('')
+                setParsedRows([])
+                setUploadError('')
+                setSaveSuccess(false)
+              }}
+              className="w-full sm:w-80 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+            >
+              <option value="">Semua Kelas</option>
+              {kelasList.map((k) => (
+                <option key={k} value={k}>{k}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Mata Pelajaran</label>
             <select
               value={selectedMapel}
               onChange={(e) => setSelectedMapel(e.target.value)}
               className="w-full sm:w-80 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              disabled={!selectedKelas && kelasList.length > 0}
               required
             >
-              <option value="">Pilih mata pelajaran...</option>
+              <option value="">{selectedKelas ? 'Pilih mata pelajaran...' : 'Pilih kelas terlebih dahulu'}</option>
               {mapelList.map((m) => (
                 <option key={m.id} value={m.id}>{m.nama}</option>
               ))}
