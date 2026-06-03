@@ -17,7 +17,9 @@ interface ParsedRow {
 export default function UploadPage() {
   const [mapelList, setMapelList] = useState<MataPelajaran[]>([])
   const [selectedMapel, setSelectedMapel] = useState('')
+  const [inputMode, setInputMode] = useState<'file' | 'text'>('file')
   const [file, setFile] = useState<File | null>(null)
+  const [pasteText, setPasteText] = useState('')
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState('')
   const [parsedRows, setParsedRows] = useState<ParsedRow[]>([])
@@ -44,22 +46,28 @@ export default function UploadPage() {
     if (selectedMapel) checkExisting(selectedMapel)
   }, [selectedMapel, checkExisting])
 
-  async function handleFileUpload(e: React.FormEvent) {
+  async function handleParse(e: React.FormEvent) {
     e.preventDefault()
-    if (!file || !selectedMapel) return
+    if (!selectedMapel) return
+    if (inputMode === 'file' && !file) return
+    if (inputMode === 'text' && !pasteText.trim()) return
     setUploading(true)
     setUploadError('')
     setSaveSuccess(false)
     setParsedRows([])
 
     const formData = new FormData()
-    formData.append('file', file)
     formData.append('mata_pelajaran_id', selectedMapel)
+    if (inputMode === 'file') {
+      formData.append('file', file!)
+    } else {
+      formData.append('text', pasteText)
+    }
 
     try {
       const res = await fetch('/api/parse-kisi', { method: 'POST', body: formData })
       const result = await res.json()
-      if (!res.ok) throw new Error(result.error || 'Gagal memproses file')
+      if (!res.ok) throw new Error(result.error || 'Gagal memproses')
       setParsedRows(result.data)
     } catch (err: unknown) {
       setUploadError(err instanceof Error ? err.message : 'Terjadi kesalahan')
@@ -102,6 +110,7 @@ export default function UploadPage() {
       setSaveSuccess(true)
       setParsedRows([])
       setFile(null)
+      setPasteText('')
     }
     setSaving(false)
   }
@@ -124,7 +133,7 @@ export default function UploadPage() {
           </div>
         )}
 
-        <form onSubmit={handleFileUpload} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 space-y-4">
+        <form onSubmit={handleParse} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Mata Pelajaran</label>
             <select
@@ -155,27 +164,56 @@ export default function UploadPage() {
             </div>
           )}
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">File (.docx / .pdf)</label>
-            <input
-              type="file"
-              accept=".docx,.pdf"
-              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-              className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
-              required
-            />
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setInputMode('file')}
+              className={`px-4 py-1.5 text-sm rounded-lg transition ${inputMode === 'file' ? 'bg-indigo-100 text-indigo-700 font-medium' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'}`}
+            >
+              Upload File
+            </button>
+            <button
+              type="button"
+              onClick={() => setInputMode('text')}
+              className={`px-4 py-1.5 text-sm rounded-lg transition ${inputMode === 'text' ? 'bg-indigo-100 text-indigo-700 font-medium' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'}`}
+            >
+              Teks Langsung
+            </button>
           </div>
+
+          {inputMode === 'file' ? (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">File (.txt / .docx / .pdf)</label>
+              <input
+                type="file"
+                accept=".txt,.docx,.pdf"
+                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+              />
+            </div>
+          ) : (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Teks Kisi-Kisi</label>
+              <textarea
+                value={pasteText}
+                onChange={(e) => setPasteText(e.target.value)}
+                rows={10}
+                placeholder="Copy-paste teks kisi-kisi di sini..."
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 resize-y"
+              />
+            </div>
+          )}
 
           <button
             type="submit"
             disabled={uploading}
             className="px-6 py-2 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition"
           >
-            {uploading ? 'Memproses file...' : 'Upload & Proses'}
+            {uploading ? 'Memproses...' : 'Parse & Preview'}
           </button>
 
           {uploadError && (
-            <p className="text-sm text-red-600">{uploadError}</p>
+            <p className="text-sm text-red-600 whitespace-pre-wrap">{uploadError}</p>
           )}
         </form>
 

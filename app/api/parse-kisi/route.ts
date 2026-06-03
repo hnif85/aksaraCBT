@@ -7,11 +7,19 @@ export async function POST(request: Request) {
   try {
     const formData = await request.formData()
     const file = formData.get('file') as File | null
+    const textInput = formData.get('text') as string | null
     const mataPelajaranId = formData.get('mata_pelajaran_id') as string | null
 
-    if (!file || !mataPelajaranId) {
+    if (!mataPelajaranId) {
       return NextResponse.json(
-        { error: 'File dan mata_pelajaran_id wajib diisi' },
+        { error: 'Mata pelajaran wajib diisi' },
+        { status: 400 }
+      )
+    }
+
+    if (!file && !textInput) {
+      return NextResponse.json(
+        { error: 'File atau teks kisi-kisi wajib diisi' },
         { status: 400 }
       )
     }
@@ -24,30 +32,37 @@ export async function POST(request: Request) {
       )
     }
 
-    const buffer = Buffer.from(await file.arrayBuffer())
-    const fileName = file.name.toLowerCase()
     let text = ''
 
-    if (fileName.endsWith('.docx')) {
-      const result = await mammoth.convertToHtml({ buffer })
-      text = result.value.replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim()
-    } else if (fileName.endsWith('.pdf')) {
-      try {
-        const { PDFParse } = await import('pdf-parse')
-        const pdf = new PDFParse({ data: buffer })
-        const result = await pdf.getText()
-        text = result.text
-      } catch {
+    if (textInput) {
+      text = textInput.trim()
+    } else if (file) {
+      const buffer = Buffer.from(await file.arrayBuffer())
+      const fileName = file.name.toLowerCase()
+
+      if (fileName.endsWith('.txt')) {
+        text = buffer.toString('utf-8').trim()
+      } else if (fileName.endsWith('.docx')) {
+        const result = await mammoth.convertToHtml({ buffer })
+        text = result.value.replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim()
+      } else if (fileName.endsWith('.pdf')) {
+        try {
+          const { PDFParse } = await import('pdf-parse')
+          const pdf = new PDFParse({ data: buffer })
+          const result = await pdf.getText()
+          text = result.text
+        } catch {
+          return NextResponse.json(
+            { error: 'Gagal memproses file PDF. Pastikan file valid.' },
+            { status: 400 }
+          )
+        }
+      } else {
         return NextResponse.json(
-          { error: 'Gagal memproses file PDF. Pastikan file valid.' },
+          { error: 'Format file harus .txt, .docx, atau .pdf' },
           { status: 400 }
         )
       }
-    } else {
-      return NextResponse.json(
-        { error: 'Format file harus .docx atau .pdf' },
-        { status: 400 }
-      )
     }
 
     const prompt = `Berikut adalah teks dari dokumen kisi-kisi soal. Parse tabel kisi-kisi ke JSON array.
