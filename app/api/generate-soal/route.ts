@@ -222,13 +222,11 @@ async function processBatch(
           entry.pilihan_b = 'Salah'
           entry.pilihan_c = null
           entry.pilihan_d = null
-          entry.pilihan_e = null
         } else {
           entry.pilihan_a = raw.pilihan_a || null
           entry.pilihan_b = raw.pilihan_b || null
           entry.pilihan_c = raw.pilihan_c || null
           entry.pilihan_d = raw.pilihan_d || null
-          entry.pilihan_e = raw.pilihan_e || null
         }
 
         result.entries.push(entry)
@@ -265,8 +263,8 @@ function buildBatchPrompt(kisiBatch: any[]): string {
     .join('\n')
 
   const bentukInstructions: Record<string, string> = {
-    PG: 'Pilihan Ganda — pilihan_a sampai pilihan_e, jawaban_benar 1 huruf (A/B/C/D/E)',
-    GK: 'Ganda Kompleks — pilihan_a sampai pilihan_e, jawaban_benar bisa lebih dari 1 huruf (contoh: AB, ACD, BDE)',
+    PG: 'Pilihan Ganda — pilihan_a sampai pilihan_d, jawaban_benar 1 huruf (A/B/C/D)',
+    GK: 'Ganda Kompleks — pilihan_a sampai pilihan_d, jawaban_benar bisa lebih dari 1 huruf (contoh: AB, ACD, BD)',
     BS: 'Benar-Salah — pilihan_a = "Benar", pilihan_b = "Salah", jawaban_benar = A atau B',
   }
 
@@ -293,7 +291,6 @@ Format JSON (array of objects, urut sesuai tabel di atas):
     "pilihan_b": "opsi B",
     "pilihan_c": "opsi C",
     "pilihan_d": "opsi D",
-    "pilihan_e": "opsi E",
     "jawaban_benar": "huruf jawaban",
     "pembahasan": "penjelasan jawaban"
   }

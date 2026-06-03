@@ -84,6 +84,12 @@ export default function AdminDashboard() {
           >
             Generate Soal
           </Link>
+          <Link
+            href="/admin/laporan"
+            className="inline-flex items-center justify-center px-6 py-3 bg-amber-600 text-white font-medium rounded-lg hover:bg-amber-700 transition"
+          >
+            Laporan Nilai
+          </Link>
         </div>
 
         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
