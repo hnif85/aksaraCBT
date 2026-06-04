@@ -4,11 +4,18 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 
+interface MapelKisi {
+  id: string
+  nama: string
+  kelas: string
+  jumlah_kisi: number
+}
+
 interface DashboardData {
-  totalKisi: number
+  totalMapel: number
   totalSet: number
   totalSoal: number
-  recentKisi: { id: string; materi: string; bentuk_soal: string; created_at: string; mata_pelajaran_id: string }[]
+  mapelKisi: MapelKisi[]
 }
 
 export default function AdminDashboard() {
@@ -17,18 +24,30 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     async function fetchData() {
-      const [kisiRes, setRes, soalRes, recentRes] = await Promise.all([
-        supabase.from('kisi_kisi').select('*', { count: 'exact', head: true }),
+      const [mapelRes, setRes, soalRes] = await Promise.all([
+        supabase.from('mata_pelajaran').select('*'),
         supabase.from('set_soal').select('*', { count: 'exact', head: true }),
         supabase.from('soal').select('*', { count: 'exact', head: true }),
-        supabase.from('kisi_kisi').select('*').order('created_at', { ascending: false }).limit(5),
       ])
 
+      const mapels = mapelRes.data ?? []
+      const mapelKisi: MapelKisi[] = []
+
+      for (const m of mapels) {
+        const { count } = await supabase
+          .from('kisi_kisi')
+          .select('*', { count: 'exact', head: true })
+          .eq('mata_pelajaran_id', m.id)
+        if (count && count > 0) {
+          mapelKisi.push({ id: m.id, nama: m.nama, kelas: m.kelas, jumlah_kisi: count })
+        }
+      }
+
       setData({
-        totalKisi: kisiRes.count ?? 0,
+        totalMapel: mapelKisi.length,
         totalSet: setRes.count ?? 0,
         totalSoal: soalRes.count ?? 0,
-        recentKisi: recentRes.data ?? [],
+        mapelKisi,
       })
       setLoading(false)
     }
@@ -44,7 +63,7 @@ export default function AdminDashboard() {
   }
 
   const stats = [
-    { label: 'Total Kisi-Kisi', value: data?.totalKisi ?? 0, color: 'bg-blue-500' },
+    { label: 'Mapel dengan Kisi-Kisi', value: data?.totalMapel ?? 0, color: 'bg-blue-500' },
     { label: 'Total Set Soal', value: data?.totalSet ?? 0, color: 'bg-green-500' },
     { label: 'Total Soal Generated', value: data?.totalSoal ?? 0, color: 'bg-purple-500' },
   ]
@@ -93,24 +112,49 @@ export default function AdminDashboard() {
         </div>
 
         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="font-semibold text-gray-900">Kisi-Kisi Terbaru</h2>
+          <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+            <h2 className="font-semibold text-gray-900">Daftar Mapel dengan Kisi-Kisi</h2>
+            <span className="text-xs text-gray-400">{data?.totalMapel ?? 0} mapel</span>
           </div>
-          <div className="divide-y divide-gray-100">
-            {data?.recentKisi.length === 0 && (
-              <p className="px-6 py-4 text-sm text-gray-400">Belum ada kisi-kisi.</p>
-            )}
-            {data?.recentKisi.map((k) => (
-              <div key={k.id} className="px-6 py-3 flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-900">{k.materi}</p>
-                  <p className="text-xs text-gray-400">
-                    {k.bentuk_soal} — {new Date(k.created_at).toLocaleDateString('id-ID')}
-                  </p>
-                </div>
-                <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600">{k.bentuk_soal}</span>
-              </div>
-            ))}
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 text-gray-600">
+                <tr>
+                  <th className="px-6 py-3 text-left font-medium">Mata Pelajaran</th>
+                  <th className="px-6 py-3 text-left font-medium">Kelas</th>
+                  <th className="px-6 py-3 text-center font-medium">Jumlah Kisi-Kisi</th>
+                  <th className="px-6 py-3"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {data?.mapelKisi.length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="px-6 py-8 text-center text-sm text-gray-400">
+                      Belum ada kisi-kisi. Upload sekarang.
+                    </td>
+                  </tr>
+                )}
+                {data?.mapelKisi.map((m) => (
+                  <tr key={m.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-3 font-medium text-gray-900">{m.nama}</td>
+                    <td className="px-6 py-3 text-gray-600">{m.kelas}</td>
+                    <td className="px-6 py-3 text-center">
+                      <span className="inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 text-xs font-medium bg-indigo-50 text-indigo-700 rounded-full">
+                        {m.jumlah_kisi}
+                      </span>
+                    </td>
+                    <td className="px-6 py-3 text-right">
+                      <Link
+                        href={`/admin/upload`}
+                        className="text-xs text-indigo-600 hover:underline"
+                      >
+                        Upload Ulang
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       </main>

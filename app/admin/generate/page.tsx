@@ -22,17 +22,30 @@ export default function GeneratePage() {
   const [generatedSetId, setGeneratedSetId] = useState<string | null>(null)
   const [generationError, setGenerationError] = useState('')
 
+  const [mapelWithKisi, setMapelWithKisi] = useState<Set<string>>(new Set())
+
   useEffect(() => {
-    supabase.from('mata_pelajaran').select('*').order('kelas').order('nama').then(({ data }) => {
-      if (data) {
-        setAllMapel(data)
-        const kelas = [...new Set(data.map((m) => m.kelas))].sort()
+    async function fetchData() {
+      const [mapelRes, kisiRes] = await Promise.all([
+        supabase.from('mata_pelajaran').select('*').order('kelas').order('nama'),
+        supabase.from('kisi_kisi').select('mata_pelajaran_id'),
+      ])
+      if (mapelRes.data) {
+        setAllMapel(mapelRes.data)
+        const kelas = [...new Set(mapelRes.data.map((m) => m.kelas))].sort()
         setKelasList(kelas)
       }
-    })
+      if (kisiRes.data) {
+        const ids = new Set(kisiRes.data.map((k) => k.mata_pelajaran_id))
+        setMapelWithKisi(ids)
+      }
+    }
+    fetchData()
   }, [])
 
-  const mapelList = allMapel.filter((m) => !selectedKelas || m.kelas === selectedKelas)
+  const mapelList = allMapel.filter(
+    (m) => mapelWithKisi.has(m.id) && (!selectedKelas || m.kelas === selectedKelas)
+  )
 
   useEffect(() => {
     if (!selectedMapel) {
@@ -202,17 +215,24 @@ export default function GeneratePage() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Mata Pelajaran</label>
-            <select
-              value={selectedMapel}
-              onChange={(e) => setSelectedMapel(e.target.value)}
-              className="w-full sm:w-80 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
-              disabled={!selectedKelas && kelasList.length > 0}
-            >
-              <option value="">{selectedKelas ? 'Pilih mata pelajaran...' : 'Pilih kelas terlebih dahulu'}</option>
-              {mapelList.map((m) => (
-                <option key={m.id} value={m.id}>{m.nama}</option>
-              ))}
-            </select>
+            {selectedKelas && mapelList.length === 0 ? (
+              <div className="text-sm text-gray-400 py-2">
+                Belum ada kisi-kisi untuk kelas ini.{' '}
+                <Link href="/admin/upload" className="text-indigo-600 hover:underline">Upload kisi-kisi</Link>
+              </div>
+            ) : (
+              <select
+                value={selectedMapel}
+                onChange={(e) => setSelectedMapel(e.target.value)}
+                className="w-full sm:w-80 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                disabled={!selectedKelas && kelasList.length > 0}
+              >
+                <option value="">{selectedKelas ? 'Pilih mata pelajaran...' : 'Pilih kelas terlebih dahulu'}</option>
+                {mapelList.map((m) => (
+                  <option key={m.id} value={m.id}>{m.nama}</option>
+                ))}
+              </select>
+            )}
           </div>
         </div>
 

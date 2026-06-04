@@ -69,7 +69,7 @@ Setiap objek harus memiliki field:
 Keluarkan HANYA JSON array, tanpa teks lain, tanpa markdown.
 
 Teks dokumen:
-${rawText.slice(0, 12000)}`
+${rawText.slice(0, 20000)}`
 
     const response = await fetch(DEEPSEEK_URL, {
       method: 'POST',
@@ -128,7 +128,7 @@ ${rawText.slice(0, 12000)}`
       capaian_pembelajaran: row.capaian_pembelajaran || null,
       materi: row.materi || '',
       indikator_soal: row.indikator_soal || '',
-      bentuk_soal: (['PG', 'GK', 'BS'].includes(row.bentuk_soal) ? row.bentuk_soal : 'PG') as 'PG' | 'GK' | 'BS',
+      bentuk_soal: ['PG', 'GK', 'BS', 'Isian', 'Uraian'].includes(row.bentuk_soal) ? row.bentuk_soal : 'PG',
       level_kognitif: row.level_kognitif || null,
     }))
 

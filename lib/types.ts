@@ -19,7 +19,7 @@ export interface KisiKisi {
   capaian_pembelajaran: string | null
   materi: string
   indikator_soal: string
-  bentuk_soal: 'PG' | 'GK' | 'BS'
+  bentuk_soal: string
   level_kognitif: string | null
   created_at: string
 }
@@ -47,7 +47,7 @@ export interface Soal {
   pilihan_e: string | null
   jawaban_benar: string
   pembahasan: string | null
-  bentuk_soal: 'PG' | 'GK' | 'BS'
+  bentuk_soal: string
   created_at: string
 }
 

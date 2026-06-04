@@ -103,7 +103,7 @@ export default function UploadPage() {
       capaian_pembelajaran: r.capaian_pembelajaran || null,
       materi: r.materi,
       indikator_soal: r.indikator_soal,
-      bentuk_soal: r.bentuk_soal,
+      bentuk_soal: ['PG', 'GK', 'BS'].includes(r.bentuk_soal) ? r.bentuk_soal : 'PG',
       level_kognitif: r.level_kognitif || null,
     }))
 
@@ -123,7 +123,7 @@ export default function UploadPage() {
     setSaving(false)
   }
 
-  const bentukSoalOptions: KisiKisi['bentuk_soal'][] = ['PG', 'GK', 'BS']
+  const bentukSoalOptions = ['PG', 'GK', 'BS', 'Isian', 'Uraian']
 
   return (
     <div className="min-h-screen bg-gray-50">
